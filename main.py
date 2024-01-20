@@ -33,5 +33,7 @@ async def main():
         event_metadata={'location': 'test location'},
     )
     print(event_link)
+    
+    await bot.send_guild_message(channel_id, event_link)
 
 asyncio.run(main())

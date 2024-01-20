@@ -10,6 +10,7 @@ send_guild_message function
 import json
 import aiohttp
 import time
+import textwrap
 
 DEBUG = True
 
@@ -81,13 +82,42 @@ class DiscordEvents:
 
     async def send_guild_message(
         self,
-        guild_id: str,
         channel_id: str,
         event_link: str
         ) -> None:
         '''
         Sends the event link to a text channel
         '''
+
+        message_content = textwrap.dedent(f'''
+        @everyone
+        {event_link}
+        ''')
+        message_url = f'{self.base_api_url}/channels/{channel_id}/messages'
+        message_data = json.dumps({
+            'content': message_content,
+            'tts': False
+        })
+        async with aiohttp.ClientSession(headers=self.auth_headers) as session:
+            status = 429
+            while status == 429:
+                try:
+                    async with session.post(message_url, data=message_data) as response:
+                        if response.status == 429:
+                            if DEBUG:
+                                print('DETECTED RATE LIMIT in CREATE function')
+                            reset_time = float(response.headers['X-RateLimit-Reset-After']) + 0.25
+                            time.sleep(reset_time)    
+                            continue
+                        elif response.status == 200:
+                            break
+                        else:
+                            await session.raise_for_status()
+                except aiohttp.ClientResponseError as e:
+                    if (e.status != 429):
+                        await session.close()
+                        raise e
+        await session.close()
 
     async def create_guild_event(
         self,
