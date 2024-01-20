@@ -7,6 +7,8 @@ from datetime import datetime
 import pytz
 import os
 
+# DEBUG flag will enable headed mode, which is helpful for troubleshooting MFA
+DEBUG = True
 
 async def login_to_intramural_site(browser):
     page = await browser.new_page()
@@ -85,9 +87,10 @@ async def fetch_game_data():
         # Persistant data is to keep browser recognized by Microsoft login,
         # so it does not require 2-factor authentication every time. May still ask
         # it sometimes because of forced logouts (mandated by organizations)
-        browser = await playwright.chromium.launch_persistent_context(
-            persistant_user_data_dir, headless=False
-        )
+        if DEBUG:
+            browser = await playwright.chromium.launch_persistent_context(persistant_user_data_dir, headless=False, slow_mo=100)
+        else:
+            browser = await playwright.chromium.launch_persistent_context(persistant_user_data_dir)
 
         load_dotenv()
 
