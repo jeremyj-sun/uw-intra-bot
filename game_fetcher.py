@@ -1,56 +1,53 @@
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
+from game_data import GameData
 
 from datetime import datetime
+import pytz
 import os
 
 
-def login_to_intramural_site(browser):
-    page = browser.new_page()
-    page.goto("https://warrior.uwaterloo.ca/")
-    page.wait_for_timeout(1000)
+async def login_to_intramural_site(browser):
+    page = await browser.new_page()
+    await page.goto("https://warrior.uwaterloo.ca/")
+    await page.wait_for_timeout(1000)
 
     # Execute the JavaScript code associated with the site's sign in button
     # Not an actual button; function name may change in the future
-    page.evaluate("showLogin('/')")
+    await page.evaluate("showLogin('/')")
 
     watiam_login_button = 'button[title="WATIAM USERS"]'  # WATIAM login
-    page.wait_for_selector(f"{watiam_login_button}:visible")
-    page.click(watiam_login_button)
-    page.wait_for_timeout(1000)
+    await page.wait_for_selector(f"{watiam_login_button}:visible")
+    await page.click(watiam_login_button)
+    await page.wait_for_timeout(1000)
 
     # WATIAM login redirects to Microsoft. Login to Microsoft account.
     microsoft_email_identifier = 'input[type="email"]'
-    page.wait_for_selector(microsoft_email_identifier)
-    page.fill(microsoft_email_identifier, os.getenv("EMAIL"))
-    page.press(microsoft_email_identifier, "Enter")
+    await page.wait_for_selector(microsoft_email_identifier)
+    await page.fill(microsoft_email_identifier, os.getenv("EMAIL"))
+    await page.press(microsoft_email_identifier, "Enter")
 
     microsoft_password_identifier = 'input[type="password"]'
-    page.wait_for_selector(microsoft_password_identifier)
-    page.fill(microsoft_password_identifier, os.getenv("PASSWORD"))
-    page.press(microsoft_password_identifier, "Enter")
+    await page.wait_for_selector(microsoft_password_identifier)
+    await page.fill(microsoft_password_identifier, os.getenv("PASSWORD"))
+    await page.press(microsoft_password_identifier, "Enter")
 
     return page
 
 
-def fetch_game_data(page, team_id):
-    class GameData:
-        def __init__(self, time, location, team1, team2):
-            self.time = time
-            self.location = location
-            self.team1 = team1
-            self.team2 = team2
-
+async def fetch_game_data_helper(page, team_id):
     def convert_to_iso(date_str):
         # Assume date input is: Sunday, January 21, 2024 @ 4:00 PM
         # Remove the day of the week and '@' to output yyyy-mm-ddThh:mm:ss
         clean_date = " ".join(date_str.split()[1:]).replace("@", "")
-        return datetime.strptime(clean_date, "%B %d, %Y %I:%M %p").isoformat()
+        tz = pytz.timezone('America/Toronto')
+        localized_date = tz.localize(datetime.strptime(clean_date, "%B %d, %Y %I:%M %p"))
+        return localized_date.isoformat()
 
     data_url = f"https://warrior.uwaterloo.ca/team/getteaminfo?teamid={team_id}"
-    page.goto(data_url)
-    soup = BeautifulSoup(page.content(), "html.parser")
+    await page.goto(data_url)
+    soup = BeautifulSoup(await page.content(), "html.parser")
 
     # Only time and locations are in class="game-card_title".
     # Only team names are in class="game-card-team-name".
@@ -77,8 +74,8 @@ def fetch_game_data(page, team_id):
     return game_data
 
 
-def main():
-    with sync_playwright() as playwright:
+async def fetch_game_data():
+    async with async_playwright() as playwright:
         # Sensitive folder containing browser data. Keep it secure.
         persistant_user_data_dir = "./browser/"
 
@@ -88,23 +85,18 @@ def main():
         # Persistant data is to keep browser recognized by Microsoft login,
         # so it does not require 2-factor authentication every time. May still ask
         # it sometimes because of forced logouts (mandated by organizations)
-        browser = playwright.chromium.launch_persistent_context(
+        browser = await playwright.chromium.launch_persistent_context(
             persistant_user_data_dir, headless=False
         )
 
         load_dotenv()
 
-        logged_in_page = login_to_intramural_site(browser)
+        logged_in_page = await login_to_intramural_site(browser)
 
         # Wait at least 3 seconds. Will not fetch the data in 1 second.
         # Will only get the home sign in page HTML otherwise
-        logged_in_page.wait_for_timeout(6000)
-        game_data = fetch_game_data(logged_in_page, os.getenv("TEAM_ID"))
-
-        browser.close()
+        await logged_in_page.wait_for_timeout(int(os.getenv('TIMEOUT_MS')))
+        game_data = await fetch_game_data_helper(logged_in_page, os.getenv("TEAM_ID"))
+        await browser.close()
 
         return game_data
-
-
-if __name__ == "__main__":
-    main()
