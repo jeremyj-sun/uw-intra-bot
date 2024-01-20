@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 
+from datetime import datetime
 import os
 
 
@@ -41,11 +42,15 @@ def fetch_game_data(page, team_id):
             self.team1 = team1
             self.team2 = team2
 
+    def convert_to_iso(date_str):
+        # Assume date input is: Sunday, January 21, 2024 @ 4:00 PM
+        # Remove the day of the week and '@' to output yyyy-mm-ddThh:mm:ss
+        clean_date = " ".join(date_str.split()[1:]).replace("@", "")
+        return datetime.strptime(clean_date, "%B %d, %Y %I:%M %p").isoformat()
+
     data_url = f"https://warrior.uwaterloo.ca/team/getteaminfo?teamid={team_id}"
     page.goto(data_url)
-
-    page_content = page.content()
-    soup = BeautifulSoup(page_content, "html.parser")
+    soup = BeautifulSoup(page.content(), "html.parser")
 
     # Only time and locations are in class="game-card_title".
     # Only team names are in class="game-card-team-name".
@@ -62,7 +67,7 @@ def fetch_game_data(page, team_id):
     # arr1 := time1, place1, time2, place2, time3, place3, ...
     # arr2 := team1,  team1, team2,  team2, team3,  team3, ...
     game_data = [
-        GameData(time, location, team1, team2)
+        GameData(convert_to_iso(time), location, team1, team2)
         for (time, location), (team1, team2) in zip(
             zip(time_and_locations[::2], time_and_locations[1::2]),
             zip(team_names[::2], team_names[1::2]),
@@ -94,9 +99,11 @@ def main():
         # Wait at least 3 seconds. Will not fetch the data in 1 second.
         # Will only get the home sign in page HTML otherwise
         logged_in_page.wait_for_timeout(6000)
-        fetch_game_data(logged_in_page, os.getenv("TEAM_ID"))
+        game_data = fetch_game_data(logged_in_page, os.getenv("TEAM_ID"))
 
         browser.close()
+
+        return game_data
 
 
 if __name__ == "__main__":
