@@ -115,12 +115,23 @@ class DiscordEvents:
         })
 
         async with aiohttp.ClientSession(headers=self.auth_headers) as session:
-            try:
-                async with session.post(event_create_url, data=event_data) as response:
-                    response.raise_for_status()
-                    assert response.status == 200
-                    print(f'Event \'{event_name}\' successfully created')
-            except Exception as e:
-                print(f'EXCEPTION: {e}')
-            finally:
-                await session.close()
+            status = 429
+            while status == 429:
+                try:
+                    async with session.post(event_create_url, data=event_data) as response:
+                        if response.status == 429:
+                            if DEBUG:
+                                print('DETECTED RATE LIMIT in CREATE function')
+                            reset_time = float(response.headers['X-RateLimit-Reset-After']) + 0.25
+                            time.sleep(reset_time)    
+                            continue
+                        elif response.status == 200:
+                            print(f'Event \'{event_name}\' successfully created')
+                            break
+                        else:
+                            await session.raise_for_status()
+                except aiohttp.ClientResponseError as e:
+                    if (e.status != 429):
+                        await session.close()
+                        raise e
+        await session.close()
