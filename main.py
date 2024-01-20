@@ -22,7 +22,7 @@ async def main():
     # event_data = SCRAPE_WEBPAGE FUNCTION
     # Convert datetime from local timezone to ISO standard time
 
-    # await bot.delete_guild_events(guild_id)
+    await bot.delete_guild_events(guild_id)
 
     await bot.create_guild_event(
         guild_id=guild_id,

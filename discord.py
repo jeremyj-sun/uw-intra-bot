@@ -1,6 +1,10 @@
 '''
 Class adapted from adamsbytes/python-discord-events.md
 https://gist.github.com/adamsbytes/8445e2f9a97ae98052297a4415b5356f
+
+Additions:
+Rate limiting for all functions
+send_guild_message function
 '''
 
 import json
@@ -75,7 +79,7 @@ class DiscordEvents:
         finally:
             await session.close()
 
-    async def send_message(
+    async def send_guild_message(
         self,
         guild_id: str,
         channel_id: str,
