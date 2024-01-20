@@ -98,9 +98,9 @@ def main():
 
         # Wait at least 3 seconds. Will not fetch the data in 1 second.
         # Will only get the home sign in page HTML otherwise
-        logged_in_page.wait_for_timeout(6000)
+        logged_in_page.wait_for_timeout(int(os.getenv('TIMEOUT_MS')))
         game_data = fetch_game_data(logged_in_page, os.getenv("TEAM_ID"))
-
+        print(game_data)
         browser.close()
 
         return game_data
