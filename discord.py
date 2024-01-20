@@ -12,7 +12,7 @@ import aiohttp
 import time
 import textwrap
 
-DEBUG = True
+DEBUG = False
 
 class DiscordEvents:
     '''Class to create and list Discord events utilizing their API'''
@@ -105,7 +105,7 @@ class DiscordEvents:
                     async with session.post(message_url, data=message_data) as response:
                         if response.status == 429:
                             if DEBUG:
-                                print('DETECTED RATE LIMIT in CREATE function')
+                                print('DETECTED RATE LIMIT in SEND function')
                             reset_time = float(response.headers['X-RateLimit-Reset-After']) + 0.25
                             time.sleep(reset_time)    
                             continue
