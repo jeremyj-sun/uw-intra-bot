@@ -83,13 +83,10 @@ class DiscordEvents:
         self,
         guild_id: str,
         channel_id: str,
-        event_name: str,
-        event_description: str,
-        event_start_time: str,
-        event_location: str
+        event_link: str
         ) -> None:
         '''
-        Sends message with event details to a text channel
+        Sends the event link to a text channel
         '''
 
     async def create_guild_event(
@@ -102,10 +99,11 @@ class DiscordEvents:
         event_metadata: dict,
         event_privacy_level=2,
         channel_id=None
-    ) -> None:
+    ) -> str:
         '''Creates a guild event using the supplied arguments
         The expected event_metadata format is event_metadata={'location': 'YOUR_LOCATION_NAME'}
-        The required time format is %Y-%m-%dT%H:%M:%S'''
+        The required time format is %Y-%m-%dT%H:%M:%S
+        Returns an event link'''
         event_create_url = f'{self.base_api_url}/guilds/{guild_id}/scheduled-events'
         event_data = json.dumps({
             'name': event_name,
@@ -117,7 +115,7 @@ class DiscordEvents:
             'entity_metadata': event_metadata,
             'entity_type': 3
         })
-
+        event_link = ''
         async with aiohttp.ClientSession(headers=self.auth_headers) as session:
             status = 429
             while status == 429:
@@ -131,6 +129,8 @@ class DiscordEvents:
                             continue
                         elif response.status == 200:
                             print(f'Event \'{event_name}\' successfully created')
+                            response_json = json.loads(await response.read())
+                            event_link = f"https://discord.com/events/{response_json['guild_id']}/{response_json['id']}"
                             break
                         else:
                             await session.raise_for_status()
@@ -139,3 +139,4 @@ class DiscordEvents:
                         await session.close()
                         raise e
         await session.close()
+        return event_link

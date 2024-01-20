@@ -24,7 +24,7 @@ async def main():
 
     await bot.delete_guild_events(guild_id)
 
-    await bot.create_guild_event(
+    event_link = await bot.create_guild_event(
         guild_id=guild_id,
         event_name='GAME DAY N',
         event_description='test description',
@@ -32,5 +32,6 @@ async def main():
         event_end_time='2024-01-20T16:30:00',
         event_metadata={'location': 'test location'},
     )
+    print(event_link)
 
 asyncio.run(main())
