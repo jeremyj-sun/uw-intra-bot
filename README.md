@@ -3,4 +3,6 @@ UWIntraBot scrapes University of Waterloo intramural game times to create Discor
 
 # Usage
 1. `pip install -r requirements.txt`
-2. `python3 main.py`
+2. `playwright install`
+3. `playwright install-deps`
+4. `python3 main.py`
