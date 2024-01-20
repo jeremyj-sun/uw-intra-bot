@@ -24,7 +24,7 @@ async def main():
         event_description='test description',
         event_start_time='2024-01-20T15:30:00',
         event_end_time='2024-01-20T16:30:00',
-        event_metadata={'location': 'TEST'},
+        event_metadata={'location': 'test location'},
     )
 
 asyncio.run(main())
