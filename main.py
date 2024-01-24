@@ -46,8 +46,9 @@ async def main():
             event_end_time=game_endtime(event.time),
             event_metadata={'location': event.location},
         )
-        print(event_link)
-        if int(os.environ.get('SEND_ANNOUNCEMENTS')) == 1:
-            await bot.send_guild_message(channel_id, event_link)
+        if len(event_link) > 0:
+            print(event_link)
+            if int(os.environ.get('SEND_ANNOUNCEMENTS')) == 1:
+                await bot.send_guild_message(channel_id, event_link)
 
 asyncio.run(main())

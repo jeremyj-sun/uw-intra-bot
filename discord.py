@@ -13,6 +13,9 @@ import time
 import textwrap
 
 DEBUG = False
+ERROR_CODES = {
+    'GUILD_SCHEDULED_EVENT_SCHEDULE_PAST': 50035
+}
 
 class DiscordEvents:
     '''Class to create and list Discord events utilizing their API'''
@@ -44,11 +47,13 @@ class DiscordEvents:
                             response_list = json.loads(await response.read())
                             break
                         else:
-                            session.raise_for_status()
+                            raise Exception('Unknown error occured in list_guild_events')
                 except aiohttp.ClientResponseError as e:
                     if (e.status != 429):
                         await session.close()
                         raise e
+                except Exception as e:
+                    print(e)
             await session.close()
         return response_list
     
@@ -72,11 +77,13 @@ class DiscordEvents:
                                 elif response.status == 204:
                                     break
                                 else:
-                                    await session.raise_for_status()
+                                    raise Exception('Unknown error occured in delete_guild_events')
         except aiohttp.ClientResponseError as e:
             if (e.status != 429):
                 await session.close()
                 raise e
+        except Exception as e:
+            print(e)
         finally:
             await session.close()
 
@@ -112,11 +119,13 @@ class DiscordEvents:
                         elif response.status == 200:
                             break
                         else:
-                            await session.raise_for_status()
+                            raise Exception('Unknown error occured in send_guild_message')
                 except aiohttp.ClientResponseError as e:
                     if (e.status != 429):
                         await session.close()
                         raise e
+                except Exception as e:
+                    print(e)
         await session.close()
 
     async def create_guild_event(
@@ -133,7 +142,7 @@ class DiscordEvents:
         '''Creates a guild event using the supplied arguments
         The expected event_metadata format is event_metadata={'location': 'YOUR_LOCATION_NAME'}
         The required time format is %Y-%m-%dT%H:%M:%S
-        Returns an event link'''
+        Returns an event link if the event was successfully scheduled, otherwise returns an empty string'''
         event_create_url = f'{self.base_api_url}/guilds/{guild_id}/scheduled-events'
         event_data = json.dumps({
             'name': event_name,
@@ -163,10 +172,18 @@ class DiscordEvents:
                             event_link = f"https://discord.com/events/{response_json['guild_id']}/{response_json['id']}"
                             break
                         else:
-                            await session.raise_for_status()
+                            response_json = await response.json()
+                            if DEBUG:
+                                print(json.dumps(response_json))
+                            if 'code' in response_json and response_json['code'] == ERROR_CODES['GUILD_SCHEDULED_EVENT_SCHEDULE_PAST']:
+                                return ''
+                            else: 
+                                raise Exception('Unknown error occured in create_guild_event')
                 except aiohttp.ClientResponseError as e:
                     if (e.status != 429):
                         await session.close()
                         raise e
+                except Exception as e:
+                    print(e)
         await session.close()
         return event_link
