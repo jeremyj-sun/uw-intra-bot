@@ -49,6 +49,10 @@ async def fetch_game_data_helper(page, team_id):
 
     data_url = f"https://warrior.uwaterloo.ca/team/getteaminfo?teamid={team_id}"
     await page.goto(data_url)
+    # Click filter to hide past games
+    if os.environ.get('HIDE_PAST_GAMES') == "1":
+        await page.locator("#myTeamHidePastGamesId").click()
+        await page.wait_for_timeout(2000)
     soup = BeautifulSoup(await page.content(), "html.parser")
 
     # Only time and locations are in class="game-card_title".

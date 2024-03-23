@@ -38,9 +38,13 @@ async def main():
 
     for i in range(len(event_data)):
         event = event_data[i]
+        if 'CUSTOM_EVENT_NAME' in os.environ:
+            event_name = os.environ.get('CUSTOM_EVENT_NAME')
+        else: 
+            event_name = f'GAME DAY {i+1}'
         event_link = await bot.create_guild_event(
             guild_id=guild_id,
-            event_name=f'GAME DAY {i+1}',
+            event_name=event_name,
             event_description=f'{event.team1} vs. {event.team2}',
             event_start_time=event.time,
             event_end_time=game_endtime(event.time),
